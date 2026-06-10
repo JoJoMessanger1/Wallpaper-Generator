@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <title>Wallpaper Generator</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      --bg: #020617;
+      --card: #0b1120;
+      --accent: #38bdf8;
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top, #1e293b, #020617 60%);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    header {
+      width: 100%;
+      padding: 1rem 1.5rem;
+      text-align: center;
+      border-bottom: 1px solid rgba(148,163,184,0.2);
+      backdrop-filter: blur(10px);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: linear-gradient(to bottom, rgba(15,23,42,0.9), rgba(15,23,42,0.6), transparent);
+    }
+    header h1 {
+      margin: 0;
+      font-size: 1.3rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    header p {
+      margin: 0.3rem 0 0;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+    main {
+      width: 100%;
+      max-width: 1100px;
+      padding: 1.5rem;
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+      gap: 1.5rem;
+    }
+    @media (max-width: 900px) {
+      main { grid-template-columns: 1fr; }
+    }
+    .card {
+      background: var(--card);
+      border-radius: 18px;
+      padding: 1.2rem 1.3rem;
+      border: 1px solid rgba(148,163,184,0.25);
+      box-shadow: 0 18px 45px rgba(15,23,42,0.9);
+      position: relative;
+      overflow: hidden;
+    }
+    .card-inner { position: relative; z-index: 1; }
+    .card::before {
+      content: "";
+      position: absolute;
+      inset: -40%;
+      background: radial-gradient(circle at top, rgba(56,189,248,0.12), transparent 55%);
+      opacity: 0.9;
+      pointer-events: none;
+    }
+    .card h2 {
+      margin: 0 0 0.8rem;
+      font-size: 1.05rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: #9ca3af;
+    }
+    .subtitle {
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-bottom: 1rem;
+    }
+    .preview-frame {
+      width: 100%;
+      aspect-ratio: 9 / 16;
+      border-radius: 18px;
+      background: #020617;
+      border: 1px solid rgba(148,163,184,0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      position: relative;
+    }
+    canvas {
+      max-width: 100%;
+      max-height: 100%;
+      image-rendering: crisp-edges;
+    }
+    .hint {
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-top: 0.5rem;
+    }
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.6rem;
+      margin-top: 0.9rem;
+    }
+    .btn-main {
+      border-radius: 999px;
+      border: none;
+      padding: 0.55rem 1.2rem;
+      font-size: 0.85rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: radial-gradient(circle at top, #38bdf8, #0ea5e9);
+      color: #0b1120;
+      font-weight: 600;
+      box-shadow: 0 12px 30px rgba(56,189,248,0.45);
+      transition: transform 0.08s, box-shadow 0.12s;
+    }
+    .btn-main:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 16px 40px rgba(56,189,248,0.6);
+    }
+    .btn-ghost {
+      border-radius: 999px;
+      border: 1px solid rgba(148,163,184,0.6);
+      background: rgba(15,23,42,0.9);
+      color: #e5e7eb;
+      padding: 0.5rem 1rem;
+      font-size: 0.8rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      transition: background 0.12s, border 0.12s, transform 0.08s;
+    }
+    .btn-ghost:hover {
+      background: rgba(15,23,42,1);
+      border-color: rgba(148,163,184,0.9);
+      transform: translateY(-1px);
+    }
+    .controls {
+      display: flex;
+      flex-direction: column;
+      gap: 0.9rem;
+    }
+    .control-group {
+      border-radius: 14px;
+      padding: 0.7rem 0.8rem;
+      background: radial-gradient(circle at top left, #020617, #020617 60%);
+      border: 1px solid rgba(51,65,85,0.9);
+    }
+    .control-title {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: #9ca3af;
+      margin-bottom: 0.4rem;
+    }
+    .control-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      align-items: center;
+    }
+    label {
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+    input[type="text"], select, input[type="number"] {
+      background: #020617;
+      border-radius: 999px;
+      border: 1px solid rgba(75,85,99,0.9);
+      color: var(--text);
+      padding: 0.35rem 0.7rem;
+      font-size: 0.8rem;
+      min-width: 0;
+    }
+    input[type="color"] {
+      border-radius: 999px;
+      border: 1px solid rgba(75,85,99,0.9);
+      background: #020617;
+      width: 40px;
+      height: 24px;
+      padding: 0;
+    }
+    input[type="file"] {
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+    footer {
+      padding: 0.8rem;
+      font-size: 0.75rem;
+      color: #6b7280;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Wallpaper Generator</h1>
+    <p>Nutze eigene Bilder + Text, um dein persönliches Handy‑Wallpaper zu erstellen.</p>
+  </header>
+
+  <main>
+    <!-- Preview -->
+    <section class="card">
+      <div class="card-inner">
+        <h2>Vorschau</h2>
+        <p class="subtitle">Das Ergebnis entspricht ungefähr einem Handy‑Wallpaper (9:16).</p>
+        <div class="preview-frame">
+          <canvas id="wallpaperCanvas" width="900" height="1600"></canvas>
+        </div>
+        <div class="actions">
+          <button id="downloadBtn" class="btn-main">⬇ Wallpaper herunterladen</button>
+          <button id="resetBtn" class="btn-ghost">↺ Zurücksetzen</button>
+        </div>
+        <p class="hint">Tipp: Auf dem Handy kannst du das Bild nach dem Download direkt als Hintergrund festlegen.</p>
+      </div>
+    </section>
+
+    <!-- Controls -->
+    <section class="card">
+      <div class="card-inner controls">
+        <h2>Editor</h2>
+        <p class="subtitle">Bild wählen, Text eingeben, Stil anpassen.</p>
+
+        <div class="control-group">
+          <div class="control-title">Hintergrundbild</div>
+          <div class="control-row">
+            <label for="imageInput">Bild aus Mediathek / Internet:</label>
+            <input type="file" id="imageInput" accept="image/*" />
+          </div>
+          <p class="hint">Du kannst jedes Bild verwenden, das du lokal gespeichert hast (auch aus dem Internet heruntergeladen).</p>
+        </div>
+
+        <div class="control-group">
+          <div class="control-title">Text</div>
+          <div class="control-row">
+            <label for="textInput">Zitat / Name / Spruch:</label>
+            <input type="text" id="textInput" placeholder="z.B. Stay focused. Stay kind." />
+          </div>
+          <div class="control-row">
+            <label for="fontSelect">Schriftart:</label>
+            <select id="fontSelect">
+              <option value="system-ui">System</option>
+              <option value="serif">Serif</option>
+              <option value="monospace">Monospace</option>
+              <option value="Poppins">Poppins (Fallback)</option>
+            </select>
+            <label for="fontSizeInput">Größe:</label>
+            <input type="number" id="fontSizeInput" value="64" min="24" max="120" />
+          </div>
+          <div class="control-row">
+            <label for="textColorInput">Textfarbe:</label>
+            <input type="color" id="textColorInput" value="#ffffff" />
+            <label for="shadowCheckbox">Textschatten:</label>
+            <input type="checkbox" id="shadowCheckbox" checked />
+          </div>
+          <div class="control-row">
+            <label for="posXInput">Position X (%):</label>
+            <input type="number" id="posXInput" value="50" min="0" max="100" />
+            <label for="posYInput">Position Y (%):</label>
+            <input type="number" id="posYInput" value="80" min="0" max="100" />
+          </div>
+        </div>
+
+        <div class="control-group">
+          <div class="control-title">Overlay & Stil</div>
+          <div class="control-row">
+            <label for="overlayColorInput">Overlay‑Farbe:</label>
+            <input type="color" id="overlayColorInput" value="#000000" />
+            <label for="overlayOpacityInput">Deckkraft (%):</label>
+            <input type="number" id="overlayOpacityInput" value="30" min="0" max="80" />
+          </div>
+          <div class="control-row">
+            <label for="blurCheckbox">Weicher Hintergrund (leichtes Blur):</label>
+            <input type="checkbox" id="blurCheckbox" />
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    Läuft komplett im Browser. Keine KI, kein Backend, ideal für GitHub Pages.
+  </footer>
+
+  <script>
+    const canvas = document.getElementById("wallpaperCanvas");
+    const ctx = canvas.getContext("2d");
+
+    const imageInput = document.getElementById("imageInput");
+    const textInput = document.getElementById("textInput");
+    const fontSelect = document.getElementById("fontSelect");
+    const fontSizeInput = document.getElementById("fontSizeInput");
+    const textColorInput = document.getElementById("textColorInput");
+    const shadowCheckbox = document.getElementById("shadowCheckbox");
+    const posXInput = document.getElementById("posXInput");
+    const posYInput = document.getElementById("posYInput");
+    const overlayColorInput = document.getElementById("overlayColorInput");
+    const overlayOpacityInput = document.getElementById("overlayOpacityInput");
+    const blurCheckbox = document.getElementById("blurCheckbox");
+
+    const downloadBtn = document.getElementById("downloadBtn");
+    const resetBtn = document.getElementById("resetBtn");
+
+    let bgImage = null;
+
+    function hexToRgba(hex, alpha) {
+      const clean = hex.replace("#", "");
+      const bigint = parseInt(clean, 16);
+      const r = (bigint >> 16) & 255;
+      const g = (bigint >> 8) & 255;
+      const b = bigint & 255;
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+
+    function drawWallpaper() {
+      const w = canvas.width;
+      const h = canvas.height;
+
+      ctx.clearRect(0, 0, w, h);
+
+      // Hintergrundbild oder Fallback
+      if (bgImage) {
+        const imgRatio = bgImage.width / bgImage.height;
+        const canvasRatio = w / h;
+        let drawWidth, drawHeight, offsetX, offsetY;
+
+        if (imgRatio > canvasRatio) {
+          drawHeight = h;
+          drawWidth = imgRatio * drawHeight;
+          offsetX = (w - drawWidth) / 2;
+          offsetY = 0;
+        } else {
+          drawWidth = w;
+          drawHeight = drawWidth / imgRatio;
+          offsetX = 0;
+          offsetY = (h - drawHeight) / 2;
+        }
+
+        if (blurCheckbox.checked) {
+          ctx.filter = "blur(4px)";
+        } else {
+          ctx.filter = "none";
+        }
+        ctx.drawImage(bgImage, offsetX, offsetY, drawWidth, drawHeight);
+        ctx.filter = "none";
+      } else {
+        const grad = ctx.createLinearGradient(0, 0, 0, h);
+        grad.addColorStop(0, "#0f172a");
+        grad.addColorStop(1, "#020617");
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, w, h);
+      }
+
+      // Overlay
+      const overlayColor = overlayColorInput.value || "#000000";
+      const overlayOpacity = (parseInt(overlayOpacityInput.value, 10) || 0) / 100;
+      if (overlayOpacity > 0) {
+        ctx.fillStyle = hexToRgba(overlayColor, overlayOpacity);
+        ctx.fillRect(0, 0, w, h);
+      }
+
+      // Text
+      const text = textInput.value.trim();
+      if (text) {
+        const fontSize = parseInt(fontSizeInput.value, 10) || 64;
+        const fontFamily = fontSelect.value || "system-ui";
+        ctx.font = `${fontSize}px ${fontFamily}`;
+        ctx.fillStyle = textColorInput.value || "#ffffff";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+
+        const xPercent = Math.min(Math.max(parseInt(posXInput.value, 10) || 50, 0), 100);
+        const yPercent = Math.min(Math.max(parseInt(posYInput.value, 10) || 80, 0), 100);
+        const x = (xPercent / 100) * w;
+        const y = (yPercent / 100) * h;
+
+        if (shadowCheckbox.checked) {
+          ctx.shadowColor = "rgba(0,0,0,0.8)";
+          ctx.shadowBlur = 12;
+          ctx.shadowOffsetX = 2;
+          ctx.shadowOffsetY = 4;
+        } else {
+          ctx.shadowColor = "transparent";
+          ctx.shadowBlur = 0;
+          ctx.shadowOffsetX = 0;
+          ctx.shadowOffsetY = 0;
+        }
+
+        const maxWidth = w * 0.8;
+        wrapText(ctx, text, x, y, maxWidth, fontSize * 1.3);
+      }
+    }
+
+    function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
+      const words = text.split(" ");
+      let line = "";
+      const lines = [];
+      for (let n = 0; n < words.length; n++) {
+        const testLine = line + words[n] + " ";
+        const metrics = ctx.measureText(testLine);
+        const testWidth = metrics.width;
+        if (testWidth > maxWidth && n > 0) {
+          lines.push(line.trim());
+          line = words[n] + " ";
+        } else {
+          line = testLine;
+        }
+      }
+      lines.push(line.trim());
+
+      const totalHeight = lines.length * lineHeight;
+      let startY = y - totalHeight / 2 + lineHeight / 2;
+
+      lines.forEach(l => {
+        ctx.fillText(l, x, startY, maxWidth);
+        startY += lineHeight;
+      });
+    }
+
+    imageInput.addEventListener("change", e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = ev => {
+        const img = new Image();
+        img.onload = () => {
+          bgImage = img;
+          drawWallpaper();
+        };
+        img.src = ev.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    [
+      textInput, fontSelect, fontSizeInput, textColorInput,
+      shadowCheckbox, posXInput, posYInput,
+      overlayColorInput, overlayOpacityInput, blurCheckbox
+    ].forEach(el => {
+      el.addEventListener("input", drawWallpaper);
+      el.addEventListener("change", drawWallpaper);
+    });
+
+    downloadBtn.addEventListener("click", () => {
+      const link = document.createElement("a");
+      link.download = "wallpaper.png";
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+    });
+
+    resetBtn.addEventListener("click", () => {
+      bgImage = null;
+      textInput.value = "";
+      fontSelect.value = "system-ui";
+      fontSizeInput.value = 64;
+      textColorInput.value = "#ffffff";
+      shadowCheckbox.checked = true;
+      posXInput.value = 50;
+      posYInput.value = 80;
+      overlayColorInput.value = "#000000";
+      overlayOpacityInput.value = 30;
+      blurCheckbox.checked = false;
+      drawWallpaper();
+    });
+
+    drawWallpaper();
+  </script>
+</body>
+</html>
